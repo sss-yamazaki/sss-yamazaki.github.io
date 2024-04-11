@@ -1,0 +1,200 @@
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 8px;
+}
+
+.setting {
+  display: inline-block;
+}
+
+.setting form {
+  padding: 16px 24px;
+  border: 1px solid rgb(209, 209, 209);
+  border-radius: 4px;
+  background-color: rgb(243, 243, 243);
+}
+
+.setting form>div+div {
+  margin-top: 4px;
+}
+
+.setting label {
+  display: inline-block;
+  min-width: 60px;
+  color: gray;
+}
+
+.setting input {
+  padding: 2px 0 2px 4px;
+  border: 1px solid gray;
+  border-radius: 3px;
+}
+
+.setting button {
+  color: white;
+  background-color: rgb(6 196 130);
+  border: none;
+  border-radius: 8px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 4px;
+}
+
+.setting button:hover {
+  opacity: 0.8;
+}
+
+.game {
+  display: inline-block;
+  border: 4px solid;
+  border-color: white darkgray gray white;
+  background-color: #EEEEEE;
+  padding: 8px;
+  box-shadow: 0 0 10px 0 gray;
+  margin-bottom: 24px;
+}
+
+.game * {
+  box-sizing: border-box;
+}
+
+.operations {
+  padding: 8px;
+  border: 4px solid;
+  border-color: gray white white darkgray;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.counter {
+  border: 1px solid;
+  border-color: gray white white darkgray;
+  background-color: black;
+  color: red;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 2px 4px;
+  min-width: 64px;
+  text-align: right;
+}
+
+.reload {
+  border: 4px solid;
+  font-size: 20px;
+  border-color: white gray darkgray white;
+  box-shadow: 0 0 0 1px gray;
+}
+
+.reload::after {
+  content: '🙂';
+}
+
+.reload.gameclear::after {
+  content: '😎';
+}
+
+.reload.gameover::after {
+  content: '😵';
+}
+
+.reload:active {
+  border-color: gray white white darkgray;
+}
+
+.board-frame {
+  border: 4px solid;
+  border-color: gray white white darkgray;
+}
+
+.board {
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  width: calc(24px * var(--width));
+  box-sizing: content-box;
+  border: 1px solid darkgray;
+  border-style: none solid solid none;
+}
+
+.cell {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  background-color: #EEEEEE;
+  font-weight: bold;
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 24px;
+}
+
+.cell:not(.open) {
+  border: 3px solid;
+  border-color: white darkgray gray white;
+}
+
+.cell:not(.open):not(.flag):active {
+  border: 1px dotted gray;
+}
+
+.cell.open {
+  background-color: white;
+  border: 1px solid darkgray;
+  border-style: solid none none solid;
+}
+
+.cell.mine::after {
+  content: '💣';
+}
+
+.cell.flag:not(.open)::after {
+  content: '🚩';
+  position: relative;
+  top: -4px;
+}
+
+.cell.flag.open.mine {
+  background-color: yellow;
+}
+
+.cell.flag.open:not(.mine)::after {
+  content: '❌';
+}
+
+.cell[data-mine]::after {
+  content: attr(data-mine);
+}
+
+.cell[data-mine="1"] {
+  color: blue;
+}
+
+.cell[data-mine="2"] {
+  color: green;
+}
+
+.cell[data-mine="3"] {
+  color: red;
+}
+
+.cell[data-mine="4"] {
+  color: indigo;
+}
+
+.cell[data-mine="5"] {
+  color: brown;
+}
+
+.cell[data-mine="6"] {
+  color: #00a497;
+}
+
+.cell[data-mine="7"] {
+  color: black;
+}
+
+.cell[data-mine="8"] {
+  color: gray;
+}
