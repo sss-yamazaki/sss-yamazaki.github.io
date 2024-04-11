@@ -1,0 +1,435 @@
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.0"></script>
+</head>
+
+<body>
+    <div id="app" class="container">
+        <minesweeper ref="game"></minesweeper>
+        <minesweeper-config @apply="apply"></minesweeper-config>
+    </div>
+</body>
+
+</html>
+
+<script type="text/x-template" id="template-minesweeper">
+    <div class="game" v-if="game">
+        <div class="operations">
+            <div class="counter">{{ game.mineCount - game.flagCount }}</div>
+            <button class="reload" @click="reset()">😊</button>
+            <div class="counter">{{ timerCount }}</div>
+        </div>
+        <div class="board-frame">
+            <div class="board" :style="`--width: ${game.width};`">
+                <div 
+                    v-for="cell in game.cells" 
+                    :class="classes(cell)" 
+                    :data-mine="mine(cell)" 
+                    @click="open(cell)" 
+                    @click.right.prevent="toggleFlag(cell)"
+                    ></div>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/x-template" id="template-minesweeper-config">
+    <div class="setting">
+        <h3>設定</h3>
+        <form class="setting-form">
+            <div>
+                <label for="height">行数</label>
+                <input type="number" name="height" v-model="config.height">
+            </div>
+            <div>
+                <label for="width">列数</label>
+                <input type="number" name="width" v-model="config.width">
+            </div>
+            <div>
+                <label for="mine">地雷</label>
+                <input type="number" name="mine" v-model="config.mine">
+            </div>
+            <div>
+                <input type="button" value="変更" @click="apply">
+            </div>
+        </form>
+    </div>
+</script>
+
+<script>
+    class Cell {
+        index = 0;
+        x = 0;
+        y = 0;
+        isMine = false;
+        isOpen = false;
+        isFlag = false;
+        mineCount = 0;
+        order = 0;
+
+        constructor(index, x, y) {
+            this.index = index;
+            this.x = x;
+            this.y = y;
+            this.order = Math.random();
+        }
+    }
+
+    class Minesweeper {
+        width = 0;
+        height = 0;
+        mineCount = 0;
+        openCount = 0;
+        flagCount = 0;
+        clickCount = 0;
+        cells = [];
+        arounds = [];
+        gameover = false;
+        gameclear = false;
+
+        constructor(w, h, m) {
+            this.width = w;
+            this.height = h;
+            this.mineCount = m;
+
+            // 周囲セルインデックス差
+            this.arounds = [...Array(9)]
+                .map((_, i) => (((i / 3) | 0) - 1) * w + ((i % 3 | 0) - 1))
+                .filter((i) => i != 4);
+
+            // セル作成
+            this.reset();
+        }
+
+        reset() {
+            var cells = [...Array(this.width * this.height)].map(
+                (_, i) => new Cell(i, (i / this.width) | 0, i % this.width | 0)
+            );
+
+            // 地雷ランダム配置
+            cells
+                .concat()
+                .sort((a, b) => a.order - b.order)
+                .slice(0, this.mineCount)
+                .forEach((cell) => (cell.isMine = true));
+
+            // 地雷数計算
+            cells.forEach((cell, i) => {
+                cell.mineCount = this.arounds.reduce(
+                    (c, d) => {
+                        return c + Number(this.#check(i, d) && (cells[i + d]?.isMine || false));
+                    },
+                    0
+                );
+            });
+
+            this.cells = cells;
+            this.gameover = false;
+            this.flagCount = 0;
+            this.openCount = 0;
+            this.clickCount = 0;
+        }
+
+        open(index) {
+            var cell = this.cells[index];
+            if (!cell || cell.isOpen || cell.isFlag) {
+                return;
+            }
+
+            cell.isOpen = true;
+            this.openCount++;
+            this.clickCount++;
+
+            if (cell.isMine) {
+                // ゲームオーバー (全オープン)
+                this.cells.forEach((cell) => (cell.isOpen = true));
+                this.gameover = true;
+
+            } else if (!cell.mineCount) {
+                // 周囲オープン
+                this.arounds.forEach((d) => {
+                    if (this.#check(cell.index, d)) {
+                        this.open(cell.index + d);
+                    }
+                });
+            }
+
+            // ゲームクリア
+            this.gameclear =
+                this.width * this.height - this.mineCount == this.openCount;
+        }
+
+        toggleFlag(index) {
+            var cell = this.cells[index];
+            if (!cell || cell.isOpen) {
+                return;
+            }
+
+            cell.isFlag = !cell.isFlag;
+            this.flagCount += cell.isFlag ? 1 : -1;
+        }
+
+        #check(index, delta) {
+            return Math.abs(((index + delta + this.width) % this.width) - (index % this.width)) < 2;
+        }
+    }
+</script>
+
+<script>
+    Vue.component('minesweeper', {
+        template: '#template-minesweeper',
+        data() {
+            return {
+                timerCount: 0,
+                timer: null,
+                game: null,
+            };
+        },
+        computed: {
+            mine() {
+                return (cell) => {
+                    return cell.isOpen && !cell.isMine && cell.mineCount ? cell.mineCount : null;
+                };
+            },
+            classes() {
+                return (cell) => {
+                    return {
+                        cell: true,
+                        open: cell.isOpen,
+                        mine: cell.isOpen && cell.isMine,
+                        flag: cell.isFlag,
+                    };
+                };
+            }
+        },
+        methods: {
+            open(cell) {
+                this.game.open(cell.index);
+                if (!this.timer) {
+                    this.timer = setInterval(() => {
+                        this.timerCount++;
+                    }, 1000);
+                }
+                if (this.game.gameclear) {
+                    alert('クリア！');
+                }
+                if (this.game.gameover) {
+                    alert('ゲームオーバー！');
+                }
+                if (this.game.gameclear || this.game.gameover) {
+                    clearInterval(this.timer);
+                    this.timer = null;
+                }   
+            },
+            toggleFlag(cell) {
+                this.game.toggleFlag(cell.index);
+            },
+            reset(config) {
+                clearInterval(this.timer);
+                this.timer = null;
+                this.timerCount = 0;
+                
+                if (config) {
+                    this.game = new Minesweeper(
+                        Number(config.width),
+                        Number(config.height),
+                        Number(config.mine)
+                    );
+                } else {
+                    this.game.reset();
+                }
+            },
+        },
+    });
+
+    Vue.component('minesweeper-config', {
+        template: '#template-minesweeper-config',
+        data() {
+            return {
+                config: JSON.parse(localStorage.getItem('config')) || {
+                    width: 1,
+                    height: 1,
+                    mine: 1,
+                },
+            };
+        },
+        methods: {
+            apply() {
+                localStorage.setItem('config', JSON.stringify(this.config));
+                this.$emit('apply', this.config);
+            },
+        },
+    });
+
+    // テーブル
+    new Vue({
+        el: '#app',
+        data: {
+            mineCount: 0,
+            timerCount: 0,
+            width: 0,
+            height: 0,
+            game: null,
+        },
+        methods: {
+            apply(config) {
+                this.$refs.game.reset(config);
+            },
+        },
+    });
+</script>
+<style>
+    h3 {
+        margin: 0px;
+    }
+
+    .setting {
+        margin-top: 50px;
+        margin-left: 50px;
+    }
+
+    .setting-form {
+        padding: 5px;
+        width: 200px;
+        height: 100px;
+        border: 2px solid black;
+    }
+
+    .game {
+        display: inline-block;
+        border: 4px solid;
+        border-color: white darkgray gray white;
+        background-color: #EEEEEE;
+        padding: 8px;
+        box-shadow: 0 0 10px 0 gray;
+    }
+
+    .game * {
+        box-sizing: border-box;
+    }
+
+    .operations {
+        padding: 8px;
+        border: 4px solid;
+        border-color: gray white white darkgray;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .counter {
+        border: 1px solid;
+        border-color: gray white white darkgray;
+        background-color: black;
+        color: red;
+        font-size: 20px;
+        font-weight: bold;
+        padding: 2px 4px;
+        min-width: 64px;
+        text-align: right;
+    }
+    .reload {
+        border: 4px solid;
+        font-size: 20px;
+        border-color: white gray darkgray white;
+        box-shadow: 0 0 0 1px gray;
+    }
+    .reload:active {
+        border-color: gray white white darkgray;
+    }
+
+    .board-frame {
+        border: 4px solid;
+        border-color: gray white white darkgray;
+    }
+
+    .board {
+        font-size: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        width: calc(24px * var(--width));
+        box-sizing: content-box;
+        border: 1px solid darkgray;
+        border-style: none solid solid none;
+    }
+
+    .cell {
+        width: 24px;
+        height: 24px;
+        position: relative;
+        background-color: #EEEEEE;
+        font-weight: bold;
+        text-align: center;
+        box-sizing: border-box;
+        line-height: 24px;
+    }
+
+    .cell:not(.open) {
+        border: 3px solid;
+        border-color: white darkgray gray white;
+    }
+    .cell:not(.open):active {
+        border: 1px dotted gray;
+    }
+
+    .cell.open {
+        background-color: white;
+        border: 1px solid darkgray;
+        border-style: solid none none solid;
+    }
+
+    .cell.mine::after {
+        content: '💣';
+    }
+
+    .cell.flag:not(.open)::after {
+        content: '🚩';
+        position: relative;
+        top: -4px;
+    }
+
+    .cell.flag.open.mine {
+        background-color: yellow;
+    }
+
+    .cell.flag.open:not(.mine)::after {
+        content: '❌';
+    }
+
+    .cell[data-mine]::after {
+        content: attr(data-mine);
+    }
+
+    .cell[data-mine="1"] {
+        color: blue;
+    }
+
+    .cell[data-mine="2"] {
+        color: green;
+    }
+
+    .cell[data-mine="3"] {
+        color: red;
+    }
+
+    .cell[data-mine="4"] {
+        color: indigo;
+    }
+
+    .cell[data-mine="5"] {
+        color: brown;
+    }
+
+    .cell[data-mine="6"] {
+        color: #00a497;
+    }
+
+    .cell[data-mine="7"] {
+        color: black;
+    }
+
+    .cell[data-mine="8"] {
+        color: gray;
+    }
+</style>
